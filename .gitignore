@@ -47,12 +47,15 @@ coverage.xml
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.python-version
 
 # IDE
 .vscode/
@@ -62,7 +65,14 @@ venv.bak/
 *~
 .DS_Store
 
+# Logs
+*.log
+logs/
+
 # Database
 *.db
 *.sqlite
 *.sqlite3
+
+# Docker
+docker-compose.override.yml

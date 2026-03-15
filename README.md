@@ -85,69 +85,69 @@ El servicio **loggeo_base** actúa como el punto de entrada principal para la au
 
 - **Descripción**: Autentica un usuario y genera un token JWT.
 - **Parámetros**:
-  - `email`: Email del usuario (string, requerido)
-  - `password`: Contraseña del usuario (string, requerido)
+    - `email`: Email del usuario (string, requerido)
+    - `password`: Contraseña del usuario (string, requerido)
 - **Respuesta**:
-  ```json
-  {
-    "access_token": "eyJhbGciOiJIUzI1N...",
-    "token_type": "bearer",
-    "user_id": 1,
-    "email": "usuario@example.com"
-  }
-  ```
+    ```json
+    {
+        "access_token": "eyJhbGciOiJIUzI1N...",
+        "token_type": "bearer",
+        "user_id": 1,
+        "email": "usuario@example.com"
+    }
+    ```
 
 ### 2. **GET /user/{id}**
 
 - **Descripción**: Obtiene la información del usuario autenticado.
 - **Autenticación**: Requiere token JWT válido.
 - **Parámetros**:
-  - `id`: ID del usuario (entero, requerido)
+    - `id`: ID del usuario (entero, requerido)
 - **Respuesta**:
-  ```json
-  {
-    "id": 1,
-    "email": "usuario@example.com",
-    "nombre": "Juan",
-    "apellido": "Pérez",
-    "teléfono": "+57 3001234567",
-    "fecha_creacion": "2024-01-15T10:30:00Z"
-  }
-  ```
+    ```json
+    {
+        "id": 1,
+        "email": "usuario@example.com",
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "teléfono": "+57 3001234567",
+        "fecha_creacion": "2024-01-15T10:30:00Z"
+    }
+    ```
 
 ### 3. **PUT /user/{id}**
 
 - **Descripción**: Actualiza la información del usuario (perfil, contraseña, etc.).
 - **Autenticación**: Requiere token JWT válido.
 - **Parámetros**:
-  - `id`: ID del usuario (entero, requerido)
-  - `nombre`: Nombre actualizado (string, opcional)
-  - `apellido`: Apellido actualizado (string, opcional)
-  - `teléfono`: Número de teléfono (string, opcional)
-  - `password`: Nueva contraseña (string, opcional)
+    - `id`: ID del usuario (entero, requerido)
+    - `nombre`: Nombre actualizado (string, opcional)
+    - `apellido`: Apellido actualizado (string, opcional)
+    - `teléfono`: Número de teléfono (string, opcional)
+    - `password`: Nueva contraseña (string, opcional)
 - **Respuesta**:
-  ```json
-  {
-    "mensaje": "Usuario actualizado exitosamente",
-    "usuario": {
-      "id": 1,
-      "email": "usuario@example.com",
-      "nombre": "Juan",
-      "apellido": "Pérez"
+    ```json
+    {
+        "mensaje": "Usuario actualizado exitosamente",
+        "usuario": {
+            "id": 1,
+            "email": "usuario@example.com",
+            "nombre": "Juan",
+            "apellido": "Pérez"
+        }
     }
-  }
-  ```
+    ```
 
 ### 4. **POST /logout**
 
 - **Descripción**: Invalida el token JWT del usuario.
 - **Autenticación**: Requiere token JWT válido.
 - **Respuesta**:
-  ```json
-  {
-    "mensaje": "Sesión cerrada exitosamente"
-  }
-  ```
+    ```json
+    {
+        "mensaje": "Sesión cerrada exitosamente"
+    }
+    ```
 
 ## Configuración
 
@@ -208,6 +208,40 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 El servicio estará disponible en: `http://localhost:8000`
+
+## Docker
+
+Se incluyeron archivos para ejecutar el servicio completo con contenedores:
+
+- `Dockerfile`: imagen de la API FastAPI
+- `docker-compose.yml`: API + PostgreSQL
+- `.dockerignore`: exclusiones para acelerar build
+
+### Ejecutar con Docker Compose
+
+Primero, cree su archivo de entorno local:
+
+```bash
+cp .env.example .env
+```
+
+```bash
+docker compose up --build
+```
+
+La API quedará disponible en `http://localhost:8000` y la base de datos en `localhost:5432`.
+
+Para detener y eliminar contenedores:
+
+```bash
+docker compose down
+```
+
+Para detener y eliminar también el volumen de PostgreSQL:
+
+```bash
+docker compose down -v
+```
 
 ## Probar los Endpoints
 
