@@ -31,6 +31,11 @@ def create_vehicle(db: Session, owner_id: int, vehicle_in: schemas.VehicleCreate
         return None
 
 
+def get_user_vehicles(db: Session, owner_id: int):
+    """Obtiene todos los vehículos de un usuario."""
+    return db.query(models.Vehicle).filter(models.Vehicle.user_id == owner_id).all()
+
+
 def get_vehicle_by_id_and_owner(db: Session, vehicle_id: int, owner_id: int):
     """Obtiene un vehículo por su id verificando que pertenezca al usuario."""
     return (
