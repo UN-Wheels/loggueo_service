@@ -6,6 +6,7 @@ from datetime import datetime
 
 class UserCreate(BaseModel):
     """Schema para crear un usuario"""
+
     name: str
     email: EmailStr
     password: str
@@ -34,6 +35,7 @@ class UserCreate(BaseModel):
 
 class UserOut(BaseModel):
     """Schema para mostrar la información de un usuario (sin la contraseña)"""
+
     id: int
     created_at: datetime
     name: str
@@ -51,6 +53,7 @@ class UserOut(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema para actualizar la información del usuario"""
+
     name: Optional[str] = None
     phone_number: Optional[str] = None
     gender: Optional[str] = None
@@ -70,16 +73,62 @@ class UserUpdate(BaseModel):
 
 class LoginRequest(BaseModel):
     """Schema para el login del usuario"""
+
     username: EmailStr
     password: str
 
 
 class Token(BaseModel):
     """Schema para el token JWT"""
+
     access_token: str
     token_type: str
 
 
 class TokenData(BaseModel):
     """Schema para los datos del token"""
+
     email: Optional[EmailStr] = None
+
+
+class VehicleBase(BaseModel):
+    """Schema base para datos de vehículo"""
+
+    plate: str
+    vehicle_type: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    color: Optional[str] = None
+    year: Optional[int] = None
+    notes: Optional[str] = None
+
+    @field_validator("plate", mode="before")
+    @classmethod
+    def normalize_plate(cls, v: str) -> str:
+        if not isinstance(v, str):
+            raise ValueError("La placa debe ser un texto válido")
+        return v.strip().upper().replace(" ", "")
+
+    @field_validator("vehicle_type", "brand", "model", "color", mode="before")
+    @classmethod
+    def normalize_vehicle_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
+
+class VehicleCreate(VehicleBase):
+    """Schema para crear un vehículo"""
+
+    pass
+
+
+class VehicleOut(VehicleBase):
+    """Schema para mostrar la información del vehículo"""
+
+    id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

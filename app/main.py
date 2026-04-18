@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
-from app.api.v1.endpoints import auth
+from app.api.v1.endpoints import auth, vehicles
 from app.db import models, database
 
 # Crear las tablas en la base de datos si no existen
@@ -17,7 +17,7 @@ except Exception as e:
 app = FastAPI(
     title="Loggeo Base - Servicio de Autenticación",
     description="Microservicio de autenticación y gestión de usuarios para UIFCE",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Configurar CORS
@@ -31,6 +31,7 @@ app.add_middleware(
 
 # Incluir routers de autenticación
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Autenticación"])
+app.include_router(vehicles.router, prefix="/api/v1/vehicles", tags=["Vehículos"])
 
 
 # Endpoint de salud
