@@ -15,7 +15,6 @@ El servicio **loggeo_base** actúa como el punto de entrada principal para la au
 - **JWT**: Para la generación y validación de tokens de acceso.
 - **OAuth2**: Protocolo de autorización utilizado para la seguridad de endpoints.
 - **PostgreSQL**: Base de datos relacional utilizada para almacenar la información de los usuarios.
-- **Prometheus**: Para monitoreo y métricas del servicio.
 
 ## Flujo de Funcionamiento
 
@@ -31,40 +30,39 @@ El servicio **loggeo_base** actúa como el punto de entrada principal para la au
                              │
         ┌────────────────────┼────────────────────┐
         │                    │                    │
-   ┌────▼────┐         ┌───▼────┐         ┌────▼─────┐
-   │ POST     │         │ GET    │         │ PUT      │
-   │ /login   │         │ /user/ │         │ /user/   │
-   └────┬────┘         │{id}   │         │{id}     │
-        │              └────┬───┘         └────┬────┘
-        │                   │                   │
+   ┌────▼────────┐    ┌───▼─────┐        ┌────▼──────┐
+   │ POST         │    │ GET     │        │ POST/PUT  │
+   │ /register    │    │ /me     │        │ /me       │
+   │ /login       │    │         │        │           │
+   └────┬────────┘    └────┬────┘        └────┬──────┘
+        │                  │                   │
    ┌────▼──────────────────┴───────────────┬──▼─────────┐
-   │         Capa de Validación/Autenticación           │
-   │  - Validar credenciales                           │
-   │  - Validar token JWT                              │
-   │  - Validar datos de actualización                  │
-   └────┬──────────────────┬───────────────┬───────────┘
+   │      Capa de Validación/Autenticación             │
+   │  - Validar credenciales                          │
+   │  - Validar token JWT                             │
+   │  - Validar datos (email @unal.edu.co)            │
+   └────┬──────────────────┬───────────────┬──────────┘
         │                  │               │
-   ┌────▼──────────┬──────▼────┐    ┌─────▼───────┐
-   │ Autenticación │ Obtención  │    │ Actualizar  │
-   │ de Usuario    │ de Datos   │    │ Datos       │
-   │              │            │    │             │
-   │ 1. Hash Pass  │ 1. Búsqueda│   │ 1. Validar  │
-   │ 2. JWT Token  │   en DB    │   │    datos    │
-   │ 3. Respuesta  │ 2. Response│   │ 2. Encriptar│
-   │    (Token)    │            │   │    Pass     │
-   │              │            │   │ 3. Guardar  │
-   └────┬──────────┴──┬─────────┘   │    en DB    │
-        │             │              └─────┬───────┘
-        │             │                    │
-        └──────┬──────┴────────────────────┘
+   ┌────▼──────────┬──────▼────┐    ┌─────▼──────┐
+   │ Autenticación │ Obtención  │    │ Actualizar │
+   │ de Usuario    │ de Datos   │    │ Datos      │
+   │              │            │    │            │
+   │ 1. Hash Pass  │ 1. Búsqueda│   │ 1. Validar │
+   │ 2. JWT Token  │   en DB    │   │    datos   │
+   │ 3. Respuesta  │ 2. Response│   │ 2. Guardar │
+   │    (Token)    │            │   │    en DB   │
+   │              │            │   │            │
+   └────┬──────────┴──┬─────────┘   └─────┬──────┘
+        │             │                   │
+        └──────┬──────┴───────────────────┘
                │
         ┌──────▼──────────┐
         │  Base de Datos  │
         │  (PostgreSQL)   │
         │                 │
         │  - users        │
-        │  - sessions     │
-        │  - logs         │
+        │  - user_logs    │
+        │  - vehicles     │
         └────────┬────────┘
                  │
         ┌────────▼────────┐
@@ -81,73 +79,300 @@ El servicio **loggeo_base** actúa como el punto de entrada principal para la au
 
 ## Endpoints
 
-### 1. **POST /login**
+### 1. **POST /api/v1/auth/register**
+
+- **Descripción**: Registra un nuevo usuario.
+- **Validaciones**: El email debe tener dominio @unal.edu.co
+- **Body** (JSON):
+    ```json
+    {
+        "name": "Juan Pérez",
+        "email": "juan.perez@unal.edu.co",
+        "password": "password123",
+        "phone_number": "+57 3001234567",
+        "gender": "masculino",
+        "major": "ingeniería",
+        "age": 22,
+        "role": "estudiante"
+    }
+    ```
+- **Respuesta** (201 Created):
+    ```json
+    {
+        "id": 1,
+        "created_at": "2024-01-15T10:30:00Z",
+        "name": "Juan Pérez",
+        "email": "juan.perez@unal.edu.co",
+        "role": "estudiante",
+        "phone_number": "+57 3001234567",
+        "gender": "masculino",
+        "major": "ingeniería",
+        "age": 22,
+        "rating": 0.0
+    }
+    ```
+
+### 2. **POST /api/v1/auth/login**
 
 - **Descripción**: Autentica un usuario y genera un token JWT.
-- **Parámetros**:
-    - `email`: Email del usuario (string, requerido)
-    - `password`: Contraseña del usuario (string, requerido)
+- **Body** (JSON):
+    ```json
+    {
+        "username": "juan.perez@unal.edu.co",
+        "password": "password123"
+    }
+    ```
 - **Respuesta**:
     ```json
     {
         "access_token": "eyJhbGciOiJIUzI1N...",
-        "token_type": "bearer",
-        "user_id": 1,
-        "email": "usuario@example.com"
+        "token_type": "bearer"
     }
     ```
 
-### 2. **GET /user/{id}**
+### 3. **GET /api/v1/auth/me**
 
-- **Descripción**: Obtiene la información del usuario autenticado.
+- **Descripción**: Obtiene la información del usuario autenticado (basado en el token JWT).
 - **Autenticación**: Requiere token JWT válido.
-- **Parámetros**:
-    - `id`: ID del usuario (entero, requerido)
 - **Respuesta**:
     ```json
     {
         "id": 1,
-        "email": "usuario@example.com",
-        "nombre": "Juan",
-        "apellido": "Pérez",
-        "teléfono": "+57 3001234567",
-        "fecha_creacion": "2024-01-15T10:30:00Z"
+        "created_at": "2024-01-15T10:30:00Z",
+        "name": "Juan Pérez",
+        "email": "usuario@unal.edu.co",
+        "role": "estudiante",
+        "phone_number": "+57 3001234567",
+        "gender": "masculino",
+        "major": "ingeniería",
+        "age": 22,
+        "rating": 4.5
     }
     ```
 
-### 3. **PUT /user/{id}**
+### 4. **PUT /api/v1/auth/me**
 
-- **Descripción**: Actualiza la información del usuario (perfil, contraseña, etc.).
+- **Descripción**: Actualiza la información del usuario autenticado.
 - **Autenticación**: Requiere token JWT válido.
 - **Parámetros**:
-    - `id`: ID del usuario (entero, requerido)
-    - `nombre`: Nombre actualizado (string, opcional)
-    - `apellido`: Apellido actualizado (string, opcional)
-    - `teléfono`: Número de teléfono (string, opcional)
+    - `name`: Nombre actualizado (string, opcional)
+    - `phone_number`: Número de teléfono (string, opcional)
+    - `gender`: Género (string, opcional)
+    - `major`: Carrera o especialidad (string, opcional)
+    - `age`: Edad (entero, opcional)
     - `password`: Nueva contraseña (string, opcional)
 - **Respuesta**:
     ```json
     {
-        "mensaje": "Usuario actualizado exitosamente",
-        "usuario": {
-            "id": 1,
-            "email": "usuario@example.com",
-            "nombre": "Juan",
-            "apellido": "Pérez"
-        }
+        "id": 1,
+        "created_at": "2024-01-15T10:30:00Z",
+        "name": "Juan Pérez",
+        "email": "usuario@unal.edu.co",
+        "role": "estudiante",
+        "phone_number": "+57 3001234567",
+        "gender": "masculino",
+        "major": "ingeniería",
+        "age": 22,
+        "rating": 4.5
     }
     ```
 
-### 4. **POST /logout**
+## Gestión de Vehículos
 
-- **Descripción**: Invalida el token JWT del usuario.
+El servicio incluye un sistema completo de gestión de vehículos. Cada usuario puede tener múltiples vehículos, y la relación es de uno-a-muchos (1 usuario : N vehículos). Un vehículo pertenece a un único usuario.
+
+### Campos del Vehículo
+
+| Campo | Tipo | Requerido | Descripción |
+| --- | --- | --- | --- |
+| `id` | Entero | Sí (generado) | Identificador único del vehículo |
+| `user_id` | Entero | Sí | ID del usuario propietario |
+| `created_at` | DateTime | Sí (generado) | Fecha de creación |
+| `plate` | String | Sí | Placa del vehículo (única, normalizada a mayúsculas sin espacios) |
+| `vehicle_type` | String | Sí | Tipo de vehículo (ej: carro, moto, bicicleta) |
+| `brand` | String | No | Marca del vehículo (ej: Mazda, Toyota) |
+| `model` | String | No | Modelo del vehículo (ej: Civic, 3 Series) |
+| `color` | String | No | Color del vehículo |
+| `year` | Entero | No | Año de fabricación |
+| `notes` | String | No | Notas adicionales sobre el vehículo |
+
+### Endpoints de Vehículos
+
+### 5. **GET /api/v1/vehicles/**
+
+- **Descripción**: Obtiene todos los vehículos del usuario autenticado.
 - **Autenticación**: Requiere token JWT válido.
+- **Respuesta** (array de vehículos):
+    ```json
+    [
+        {
+            "id": 1,
+            "user_id": 1,
+            "created_at": "2024-01-20T14:30:00Z",
+            "plate": "ABC123",
+            "vehicle_type": "carro",
+            "brand": "mazda",
+            "model": "3",
+            "color": "rojo",
+            "year": 2022,
+            "notes": "Uso diario"
+        },
+        {
+            "id": 2,
+            "user_id": 1,
+            "created_at": "2024-01-21T09:15:00Z",
+            "plate": "XYZ789",
+            "vehicle_type": "moto",
+            "brand": "yamaha",
+            "model": "ybr 125",
+            "color": "negro",
+            "year": 2021,
+            "notes": "Fines de semana"
+        }
+    ]
+    ```
+
+### 6. **GET /api/v1/vehicles/{vehicle_id}**
+
+- **Descripción**: Obtiene los detalles de un vehículo específico si pertenece al usuario autenticado.
+- **Autenticación**: Requiere token JWT válido.
+- **Parámetros**:
+    - `vehicle_id`: ID del vehículo (entero, requerido en URL)
 - **Respuesta**:
     ```json
     {
-        "mensaje": "Sesión cerrada exitosamente"
+        "id": 1,
+        "user_id": 1,
+        "created_at": "2024-01-20T14:30:00Z",
+        "plate": "ABC123",
+        "vehicle_type": "carro",
+        "brand": "mazda",
+        "model": "3",
+        "color": "rojo",
+        "year": 2022,
+        "notes": "Uso diario"
     }
     ```
+- **Errores**:
+    - `404`: Vehículo no encontrado para este usuario
+
+### 7. **POST /api/v1/vehicles/**
+
+- **Descripción**: Crea un nuevo vehículo para el usuario autenticado.
+- **Autenticación**: Requiere token JWT válido.
+- **Body** (JSON):
+    ```json
+    {
+        "plate": "ABC 123",
+        "vehicle_type": "carro",
+        "brand": "mazda",
+        "model": "3",
+        "color": "rojo",
+        "year": 2022,
+        "notes": "Uso diario"
+    }
+    ```
+- **Validaciones**:
+    - `plate`: Requerido. Se normaliza automáticamente (mayúsculas, sin espacios).
+    - `vehicle_type`: Requerido. Se convierte a minúsculas.
+    - Otros campos: Opcionales. Texto se convierte a minúsculas.
+    - La placa debe ser única en el sistema.
+- **Respuesta** (201 Created):
+    ```json
+    {
+        "id": 3,
+        "user_id": 1,
+        "created_at": "2024-01-22T10:45:00Z",
+        "plate": "ABC123",
+        "vehicle_type": "carro",
+        "brand": "mazda",
+        "model": "3",
+        "color": "rojo",
+        "year": 2022,
+        "notes": "uso diario"
+    }
+    ```
+- **Errores**:
+    - `400`: No se pudo crear el vehículo (ej: placa duplicada)
+
+### 8. **DELETE /api/v1/vehicles/{vehicle_id}**
+
+- **Descripción**: Elimina un vehículo del usuario autenticado.
+- **Autenticación**: Requiere token JWT válido.
+- **Parámetros**:
+    - `vehicle_id`: ID del vehículo (entero, requerido en URL)
+- **Respuesta** (204 No Content):
+    ```
+    (Sin cuerpo)
+    ```
+- **Errores**:
+    - `404`: Vehículo no encontrado para este usuario
+
+## Esquema de Base de Datos
+
+### Tablas Principales
+
+#### **users**
+
+Almacena la información de los usuarios del sistema.
+
+```sql
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    name VARCHAR NOT NULL,
+    role VARCHAR NOT NULL DEFAULT 'estudiante',
+    email VARCHAR UNIQUE NOT NULL,
+    hashed_password VARCHAR NOT NULL,
+    phone_number VARCHAR,
+    gender VARCHAR,
+    major VARCHAR,
+    age INTEGER,
+    rating FLOAT DEFAULT 0.0
+);
+```
+
+#### **vehicles**
+
+Almacena la información de los vehículos de cada usuario. Relación uno-a-muchos con la tabla `users`.
+
+```sql
+CREATE TABLE vehicles (
+    id INTEGER PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plate VARCHAR UNIQUE NOT NULL,
+    vehicle_type VARCHAR NOT NULL,
+    brand VARCHAR,
+    model VARCHAR,
+    color VARCHAR,
+    year INTEGER,
+    notes VARCHAR
+);
+```
+
+#### **user_logs**
+
+Registra los intentos de login de los usuarios.
+
+```sql
+CREATE TABLE user_logs (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    email VARCHAR NOT NULL,
+    login_time TIMESTAMP NOT NULL,
+    token VARCHAR NOT NULL
+);
+```
+
+### Relaciones
+
+- **users ↔ vehicles**: Un usuario puede tener muchos vehículos, pero cada vehículo pertenece a un único usuario.
+    - Clave foránea: `vehicles.user_id` → `users.id`
+    - Cascada: Si se elimina un usuario, se eliminan todos sus vehículos automáticamente.
+
+- **users ↔ user_logs**: Un usuario puede tener muchos logs de login.
+    - Clave foránea: `user_logs.user_id` → `users.id`
 
 ## Configuración
 
@@ -167,9 +392,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 # Servidor
 DEBUG=True
 ENVIRONMENT=development
-
-# Prometheus
-PROMETHEUS_PORT=8001
 ```
 
 ### 2. Crear Entorno Virtual
@@ -255,46 +477,89 @@ Acceda a la documentación alternativa en: `http://localhost:8000/redoc`
 
 ### Opción 3: Postman o cURL
 
+**Ejemplo - Register:**
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan.perez@unal.edu.co",
+    "password": "password123",
+    "phone_number": "+57 3001234567",
+    "gender": "masculino",
+    "major": "ingeniería",
+    "age": 22
+  }'
+```
+
 **Ejemplo - Login:**
 
 ```bash
-curl -X POST "http://localhost:8000/login" \
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "usuario@example.com",
+    "username": "juan.perez@unal.edu.co",
     "password": "password123"
   }'
 ```
 
-**Ejemplo - Obtener Usuario:**
+**Ejemplo - Obtener datos del usuario autenticado:**
 
 ```bash
-curl -X GET "http://localhost:8000/user/1" \
+curl -X GET "http://localhost:8000/api/v1/auth/me" \
   -H "Authorization: Bearer <access_token>"
 ```
 
-**Ejemplo - Actualizar Usuario:**
+**Ejemplo - Actualizar usuario:**
 
 ```bash
-curl -X PUT "http://localhost:8000/user/1" \
+curl -X PUT "http://localhost:8000/api/v1/auth/me" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <access_token>" \
   -d '{
-    "nombre": "Carlos",
-    "teléfono": "+57 3009876543"
+    "phone_number": "+57 3009876543",
+    "age": 23
   }'
 ```
 
-## Monitoreo
+**Ejemplo - Obtener todos los vehículos:**
 
-El servicio incluye métricas de Prometheus disponibles en: `http://localhost:8001/metrics`
+```bash
+curl -X GET "http://localhost:8000/api/v1/vehicles/" \
+  -H "Authorization: Bearer <access_token>"
+```
 
-### Métricas Disponibles:
+**Ejemplo - Obtener un vehículo específico:**
 
-- `http_requests_total`: Total de solicitudes HTTP
-- `http_request_duration_seconds`: Duración de las solicitudes
-- `login_attempts_total`: Total de intentos de login
-- `auth_errors_total`: Total de errores de autenticación
+```bash
+curl -X GET "http://localhost:8000/api/v1/vehicles/1" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Ejemplo - Crear vehículo:**
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/vehicles/" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "plate": "ABC 123",
+    "vehicle_type": "carro",
+    "brand": "mazda",
+    "model": "3",
+    "color": "rojo",
+    "year": 2022,
+    "notes": "Uso diario"
+  }'
+```
+
+**Ejemplo - Eliminar vehículo:**
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/vehicles/1" \
+  -H "Authorization: Bearer <access_token>"
+```
 
 ## Estructura de Carpetas
 
@@ -306,24 +571,24 @@ loggeo_base/
 │   ├── api/
 │   │   ├── v1/
 │   │   │   ├── endpoints/
-│   │   │   │   ├── auth.py     # Endpoints de login/logout
-│   │   │   │   └── users.py    # Endpoints de usuarios
-│   │   │   └── schemas.py      # Esquemas Pydantic
+│   │   │   │   ├── auth.py       # Endpoints de autenticación
+│   │   │   │   └── vehicles.py   # Endpoints de gestión de vehículos
+│   │   │   └── schemas.py        # Esquemas Pydantic
 │   ├── core/
-│   │   ├── config.py           # Configuración
-│   │   └── security.py         # Funciones de seguridad
+│   │   ├── config.py             # Configuración
+│   │   └── security.py           # Funciones de seguridad
 │   ├── db/
-│   │   ├── database.py         # Conexión a BD
-│   │   └── models.py           # Modelos SQLAlchemy
-│   ├── crud/
-│   │   ├── user.py             # Operaciones CRUD de usuarios
-│   │   └── session.py          # Operaciones CRUD de sesiones
-│   └── metrics/
-│       └── prometheus.py       # Métricas de Prometheus
-├── tests/                       # Tests unitarios
-├── .env                         # Variables de entorno
-├── requirements.txt             # Dependencias Python
-└── README.md                    # Este archivo
+│   │   ├── database.py           # Conexión a BD
+│   │   └── models.py             # Modelos SQLAlchemy (User, UserLog, Vehicle)
+│   └── crud/
+│       ├── user.py               # Operaciones CRUD de usuarios
+│       └── vehicle.py            # Operaciones CRUD de vehículos
+├── tests/                         # Tests unitarios
+├── .env                           # Variables de entorno
+├── requirements.txt               # Dependencias Python
+├── Dockerfile                     # Configuración Docker
+├── docker-compose.yml             # Orquestación Docker
+└── README.md                      # Este archivo
 ```
 
 ## Dependencias Principales
@@ -336,7 +601,6 @@ Ver `requirements.txt` para la lista completa. Principales:
 - `python-jose[cryptography]>=3.3.0`
 - `passlib[bcrypt]>=1.7.4`
 - `psycopg2-binary>=2.9.0`
-- `prometheus-client>=0.18.0`
 
 ## Contribuiendo
 
