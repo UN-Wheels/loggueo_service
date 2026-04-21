@@ -36,6 +36,11 @@ def get_user_vehicles(db: Session, owner_id: int):
     return db.query(models.Vehicle).filter(models.Vehicle.user_id == owner_id).all()
 
 
+def get_vehicle_by_id(db: Session, vehicle_id: int):
+    """Obtiene un vehículo por su id sin verificar ownership (uso interno/gateway)."""
+    return db.query(models.Vehicle).filter(models.Vehicle.id == vehicle_id).first()
+
+
 def get_vehicle_by_id_and_owner(db: Session, vehicle_id: int, owner_id: int):
     """Obtiene un vehículo por su id verificando que pertenezca al usuario."""
     return (

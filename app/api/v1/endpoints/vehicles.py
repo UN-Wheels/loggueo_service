@@ -19,6 +19,23 @@ def get_my_vehicles(
     return crud_vehicle.get_user_vehicles(db=db, owner_id=current_user.id)
 
 
+@router.get("/public/{vehicle_id}", response_model=schemas.VehiclePublic)
+def get_vehicle_public(
+    vehicle_id: int,
+    _: models.User = Depends(security.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna información pública de un vehículo por ID (sin verificar ownership).
+    Usado por el gateway para enriquecer respuestas de rutas."""
+    vehicle = crud_vehicle.get_vehicle_by_id(db=db, vehicle_id=vehicle_id)
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehículo no encontrado",
+        )
+    return vehicle
+
+
 @router.get("/{vehicle_id}", response_model=schemas.VehicleOut)
 def get_my_vehicle(
     vehicle_id: int,
