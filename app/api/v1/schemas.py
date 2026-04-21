@@ -85,6 +85,18 @@ class Token(BaseModel):
     token_type: str
 
 
+class UserPublic(BaseModel):
+    """Información pública de un usuario (sin datos sensibles)"""
+
+    name: str
+    email: EmailStr
+    role: str
+    rating: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
 class TokenData(BaseModel):
     """Schema para los datos del token"""
 
@@ -115,6 +127,20 @@ class VehicleBase(BaseModel):
         if isinstance(v, str):
             return v.strip().lower()
         return v
+
+
+class VehiclePublic(BaseModel):
+    """Información pública de un vehículo (sin datos del propietario)"""
+
+    plate: str
+    vehicle_type: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    color: Optional[str] = None
+    year: Optional[int] = None
+
+    class Config:
+        from_attributes = True
 
 
 class VehicleCreate(VehicleBase):

@@ -82,6 +82,22 @@ def read_current_user(
     return current_user
 
 
+@router.get("/users/{user_email}", response_model=schemas.UserPublic)
+def get_user_by_email(
+    user_email: str,
+    _: models.User = Depends(security.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna la información pública de un usuario por su email (usado como ID)."""
+    user = crud_user.get_user_by_email(db, email=user_email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado",
+        )
+    return user
+
+
 @router.put("/me", response_model=schemas.UserOut)
 def update_current_user(
     user_update: schemas.UserUpdate,
