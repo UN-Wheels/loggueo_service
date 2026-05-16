@@ -1,42 +1,70 @@
 services:
-    api:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        container_name: loggueo_api
-        env_file:
-            - .env
-        environment:
-            DATABASE_URL: postgresql://postgres:postgres@db:5432/loggeo_base_db
-            SECRET_KEY: super_secret_key_change_me
-            ACCESS_TOKEN_EXPIRE_MINUTES: 30
-            ALGORITHM: HS256
-            DEBUG: "False"
-            ENVIRONMENT: production
-        depends_on:
-            db:
-                condition: service_healthy
-        ports:
-            - "8000:8000"
-        restart: unless-stopped
 
-    db:
-        image: postgres:16-alpine
-        container_name: loggueo_db
-        environment:
-            POSTGRES_DB: loggeo_base_db
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: postgres
-        ports:
-            - "5432:5432"
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres -d loggeo_base_db"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: loggueo_api
+
+    env_file:
+      - .env
+
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/loggeo_base_db
+      SECRET_KEY: super_secret_key_change_me
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      ALGORITHM: HS256
+      DEBUG: "False"
+      ENVIRONMENT: production
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    expose:
+      - "8000"
+
+    restart: unless-stopped
+
+    networks:
+      - internal-services
+      - auth-network
+
+  db:
+    image: postgres:16-alpine
+
+    container_name: loggueo_db
+
+    environment:
+      POSTGRES_DB: loggeo_base_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    expose:
+      - "5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d loggeo_base_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+    networks:
+      - auth-network
 
 volumes:
-    postgres_data:
+  postgres_data:
+
+networks:
+
+  internal-services:
+    external: true
+
+  auth-network:
+    external: true
