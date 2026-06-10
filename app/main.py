@@ -1,8 +1,9 @@
 # app/main.py
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from sqlalchemy import text
 
 from app.api.v1.endpoints import auth, vehicles
 from app.db import models, database
@@ -38,11 +39,47 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Autenticación"])
 app.include_router(vehicles.router, prefix="/api/v1/vehicles", tags=["Vehículos"])
 
 
-# Endpoint de salud
+def _check_database() -> dict:
+    """Readiness: verifica que PostgreSQL responde."""
+    with database.engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    return {"status": "ok", "service": "loggeo-base-service", "database": "connected"}
+
+
 @app.get("/", tags=["Health"])
 def read_root():
-    """Endpoint de verificación de estado del servicio."""
+    """Compatibilidad: alias de liveness."""
     return {"status": "ok", "service": "loggeo-base-service"}
+
+
+@app.get("/healthz", tags=["Health"])
+def liveness():
+    """Liveness: el proceso FastAPI está vivo."""
+    return {"status": "ok", "service": "loggeo-base-service"}
+
+
+@app.get("/readyz", tags=["Health"])
+def readiness():
+    """Readiness: puede atender tráfico (PostgreSQL accesible)."""
+    try:
+        return _check_database()
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "error", "service": "loggeo-base-service", "database": "disconnected"},
+        )
+
+
+@app.get("/health", tags=["Health"])
+def health():
+    """Health agregado: mismo criterio que readiness."""
+    try:
+        return _check_database()
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "error", "service": "loggeo-base-service", "database": "disconnected"},
+        )
 
 
 # Personalizar esquema OpenAPI
