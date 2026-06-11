@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
-from app.db.database import get_db
+from app.db.database import get_db, get_db_read
 from app.crud import user as crud_user
 from app.api.v1 import schemas
 from app.core import security
@@ -86,7 +86,7 @@ def read_current_user(
 def get_user_by_email(
     user_email: str,
     _: models.User = Depends(security.get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_read),
 ):
     """Retorna la información pública de un usuario por su email (usado como ID)."""
     user = crud_user.get_user_by_email(db, email=user_email)

@@ -5,7 +5,7 @@ from app.api.v1 import schemas
 from app.core import security
 from app.crud import vehicle as crud_vehicle
 from app.db import models
-from app.db.database import get_db
+from app.db.database import get_db, get_db_read
 
 router = APIRouter()
 
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/", response_model=list[schemas.VehicleOut])
 def get_my_vehicles(
     current_user: models.User = Depends(security.get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_read),
 ):
     """Obtiene todos los vehículos del usuario autenticado."""
     return crud_vehicle.get_user_vehicles(db=db, owner_id=current_user.id)
@@ -23,7 +23,7 @@ def get_my_vehicles(
 def get_vehicle_public(
     vehicle_id: int,
     _: models.User = Depends(security.get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_read),
 ):
     """Retorna información pública de un vehículo por ID (sin verificar ownership).
     Usado por el gateway para enriquecer respuestas de rutas."""
@@ -40,7 +40,7 @@ def get_vehicle_public(
 def get_my_vehicle(
     vehicle_id: int,
     current_user: models.User = Depends(security.get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_read),
 ):
     """Obtiene un vehículo específico si pertenece al usuario autenticado."""
     vehicle = crud_vehicle.get_vehicle_by_id_and_owner(
