@@ -9,7 +9,7 @@ from app.db import models, database
 
 # Crear las tablas en la base de datos si no existen
 try:
-    models.Base.metadata.create_all(bind=database.engine)
+    models.Base.metadata.create_all(bind=database.engine_primary)
     print("✓ Tablas de la base de datos creadas (si no existían).")
 except Exception as e:
     print(f"✗ Error al crear las tablas de la base de datos: {e}")
